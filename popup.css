@@ -1,0 +1,19 @@
+* {
+    box-sizing: border-box;
+}
+html, body {
+    font-size: 16px;
+}
+button {
+    padding: 10px 15px;
+    min-width: 140px;
+    color: white;
+    text-transform: uppercase;
+    background: #3973e6;
+}
+
+#fetch {
+    margin-top: 10px;
+    display: none;
+    font-size: 16px;
+}
