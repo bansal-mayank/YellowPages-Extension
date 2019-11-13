@@ -5,7 +5,8 @@ let messages = [
 
 let domain = 'https://www.yellowpages.com';
 
-var collectedData;
+var collectedData = [];
+const BATCH_SIZE = 100;
 chrome.runtime.onMessage.addListener(
     async function(request, sender, sendResponse){
         console.log(request)
@@ -26,13 +27,32 @@ chrome.runtime.onMessage.addListener(
     }
 );
 
+function chunk(array, size) {
+    var length = array == null ? 0 : array.length;
+    if (!length || size < 1) {
+      return [];
+    }
+    var index = 0,
+        resIndex = 0,
+        result = [];
+  
+    while (index < length) {
+      result[resIndex++] = array.slice(index, (index += size));
+    }
+    return result;
+}
+
 function doStuff(){
     return new Promise(async function(resolve, reject){
         let time = Date.now();
-        // console.log(urls.length)
-        // console.log(urls);
         let urls = await getTotalResults();
-        collectedData = await getServiceProvidersDetails(urls);
+        let batches = chunk(urls, BATCH_SIZE);
+        while (batches.length) {
+            let batch = batches.shift();
+            let result = await getServiceProvidersDetails(batch);
+            console.log(result);
+            collectedData = collectedData.concat(result)
+        }
         resolve(collectedData)
     })
 }
@@ -75,12 +95,12 @@ async function getTotalResults () {
 }
 
 function makeCSV(data) {
-    console.log(data);
+    let name = $('input[name="search_terms"]').val();
+    console.log(name);
     var csv = "Name,Address,Phone,Email,Links\n";
     for(let i =0;i<data.length; i++) {
         var sep = "";
         let item  = data[i];
-        console.log(item);
         let a = item.address.replace(/,/g, ' ');
         let n = item.name.replace(/,/g, ' ');
         let email = '';
@@ -91,13 +111,12 @@ function makeCSV(data) {
         csv += `${n},${a},${item.phone},${email},${item.links}`;
         csv += "\n";
     }
-    console.log('CSV DATA',csv);
     window.URL = window.URL || window.webkiURL;
     let blob = new Blob([csv]);
     var blobURL = window.URL.createObjectURL(blob);
     var tempElem = document.createElement('a');
     tempElem.setAttribute('href', blobURL);
-    tempElem.setAttribute('download', 'data.csv');
+    tempElem.setAttribute('download', `${name}.csv`);
     tempElem.click();
 }
 
@@ -143,7 +162,6 @@ function getUrlsFromEachPage (url) {
 }
 
 function getPageContent (url) {
-    console.log(url)
     return new Promise(function(resolve, reject){
         fetch(url)
         .then(function(response) {
